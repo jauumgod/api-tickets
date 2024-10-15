@@ -8,6 +8,11 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class EmpresaSerializers(serializers.ModelSerializer):
     class Meta:
         model = Empresas
+        fields = ['id', 'nome', 'endereco']
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Grupos
         fields = '__all__'
     
 class SequenciaSerializer(serializers.ModelSerializer):
@@ -53,10 +58,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         return usuario
 
-class GroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Grupos
-        fields = ['id', 'name']
+
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
