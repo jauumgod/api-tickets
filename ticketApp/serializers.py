@@ -8,7 +8,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class EmpresaSerializers(serializers.ModelSerializer):
     class Meta:
         model = Empresas
-        fields = ['id', 'nome', 'endereco']
+        fields = '__all__'
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,30 +34,30 @@ class TicketSerializers(serializers.ModelSerializer):
         }
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    empresas = serializers.PrimaryKeyRelatedField(queryset=Empresas.objects.all(), many=True)  # Permite selecionar múltiplas empresas
+    empresa = serializers.PrimaryKeyRelatedField(queryset=Empresas.objects.all(), many=True)  # Permite selecionar múltiplas empresas
     password = serializers.CharField(write_only=True)  # Campo para password
 
     class Meta:
         model = Usuarios  # Refere-se ao seu modelo de usuários personalizado
-        fields = ['id', 'username', 'password', 'empresas', 'grupos']
+        fields = ['id', 'username', 'password', 'empresa', 'grupo']  # Certifique-se de incluir 'empresas' nos fields
 
     def create(self, validated_data):
-        empresas = validated_data.pop('empresas', [])  # Remove empresas do validated_data
+        # Remove empresas do validated_data para tratar separadamente
+        empresas = validated_data.pop('empresa', [])  # Note o plural aqui
         
         # Faz o hash da senha
         password = validated_data['password']
         hashed_password = make_password(password)
 
         # Cria o usuário com a senha hasheada
-        usuario = Usuarios(**validated_data)  # Cria uma instância do modelo
-        usuario.password = hashed_password  # Define a senha hasheada
-        usuario.save()  # Salva o usuário no banco de dados
+        usuario = Usuarios(**validated_data)
+        usuario.password = hashed_password
+        usuario.save()
 
-        # Associar as empresas ao usuário, se necessário
-        usuario.empresas.set(empresas)  # Isso irá criar as associações com as empresas
+        # Associa as empresas ao usuário
+        usuario.empresa.set(empresas)  # Isso vai associar as empresas
 
         return usuario
-
 
 
 

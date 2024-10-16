@@ -77,7 +77,7 @@ class TicketsListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        empresa = user_empresa.empresas.first()  # Pega a primeira empresa associada
+        empresa = user_empresa.empresa.first()  # Pega a primeira empresa associada
         print(f'Empresa: {empresa}')
         
         if empresa is None:
@@ -171,7 +171,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # Verifica se existe o UserOperacao para o usuário
         try:
             user_empresa = Usuarios.objects.get(id=user.id)  
-            empresas = user_empresa.empresas.all()
+            empresas = user_empresa.empresa
         except Usuarios.DoesNotExist:
             empresas = []
 
@@ -180,7 +180,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             'refresh': serializer.validated_data['refresh'],
             'user_id': user.id,
             'username': user.username,
-            'empresas': [empresa.id for empresa in empresas],  # Correção aqui
+            'empresas': [empresas.id] if empresas else [],  # Correção aqui
         }
         
         return Response(response_data)

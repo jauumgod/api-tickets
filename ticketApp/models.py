@@ -46,8 +46,8 @@ class Usuarios(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    empresa = models.ForeignKey(Empresas, related_name='usuarios' , on_delete=models.CASCADE)
-    grupo = models.ForeignKey(Grupos, related_name='usuarios', on_delete=models.CASCADE)
+    empresa = models.ForeignKey(Empresas, related_name='usuarios',null=True,blank=True, on_delete=models.CASCADE)
+    grupo = models.ForeignKey(Grupos, related_name='usuarios',null=True, blank=True, on_delete=models.CASCADE)
 
 
     objects = UserManager()
