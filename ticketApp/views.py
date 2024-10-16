@@ -5,22 +5,19 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth, TruncDay
 from rest_framework.views import APIView
 from .serializers import (
-    EmpresaSerializers, GroupSerializer, UsuarioSerializer,
+    EmpresaSerializers, UsuarioSerializer,
     TicketSerializers, ImagensSerializer, CustomTokenObtainPairSerializer
 )
 from rest_framework.response import Response
-
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
-
 
 
 #============OPERACAO===========
 class EmpresasListCreateView(generics.ListCreateAPIView):
     queryset = Empresas.objects.all()
     serializer_class = EmpresaSerializers
-
 
 
 class EmpresasRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -41,7 +38,6 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 #===========================TICKETS V2 - CREATE TICKET BASED ON TOKEN =========================
 
-
 class TicketsListCreateView(generics.ListCreateAPIView):
     serializer_class = TicketSerializers
     permission_classes = [IsAuthenticated]  # Garante que o usuário esteja autenticado
@@ -56,37 +52,35 @@ class TicketsListCreateView(generics.ListCreateAPIView):
 
         # Filtrando com base nos parâmetros, se estiverem presentes
         if empresa:
-            queryset = queryset.filter(empresa__nome__icontains=empresa)  # Corrigido: ajuste o campo para corresponder ao seu modelo
+            queryset = queryset.filter(empresa__nome__icontains=empresa)
+
         if sequencia:
             queryset = queryset.filter(sequencia=sequencia)
+
         if criacao:
             queryset = queryset.filter(criacao=criacao)
 
         return queryset
 
     def perform_create(self, serializer):
-        user = self.request.user  # Obtém o usuário autenticado a partir do token
-        
-        # Tenta obter a UserOperacao associada ao usuário
-        user_empresa = Usuarios.objects.filter(user=user).first()  # Verifique se o nome do modelo está correto
-        print(f'User: {user}, UserOperacao: {user_empresa}')
+        user = self.request.user
 
-        if user_empresa is None:
+        try:
+            # Obtem todas as empresas associadas ao usuário
+            user_empresas = Usuarios.objects.get(id=user.id).empresa.all()  
+        except Usuarios.DoesNotExist:
+            return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user_empresas.exists():  # Verifica se o usuário tem empresas associadas
             return Response(
-                {'error': 'Usuário não está associado a nenhuma operação.'}, 
+                {'error': 'Usuário não está associado a nenhuma empresa.'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        empresa = user_empresa.empresa.first()  # Pega a primeira empresa associada
-        print(f'Empresa: {empresa}')
-        
-        if empresa is None:
-            return Response(
-                {'error': 'Usuário não tem empresas associadas.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Pega a primeira empresa associada (você pode mudar isso conforme necessário)
+        empresa = user_empresas.first()
 
-        # Salva o ticket com o usuário e a operação automaticamente preenchidos
+        # Salva o ticket com a empresa e o usuário
         serializer.save(usuario=user, empresa=empresa)
 
 

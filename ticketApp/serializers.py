@@ -4,7 +4,6 @@ from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
-
 class EmpresaSerializers(serializers.ModelSerializer):
     class Meta:
         model = Empresas
@@ -33,20 +32,21 @@ class TicketSerializers(serializers.ModelSerializer):
             'concluido' : {'required': False}
         }
 
+
 class UsuarioSerializer(serializers.ModelSerializer):
-    empresa = serializers.PrimaryKeyRelatedField(queryset=Empresas.objects.all(), many=True)  # Permite selecionar múltiplas empresas
-    password = serializers.CharField(write_only=True)  # Campo para password
+    empresa = serializers.PrimaryKeyRelatedField(queryset=Empresas.objects.all(), many=True)  # Permite múltiplas empresas
+    password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = Usuarios  # Refere-se ao seu modelo de usuários personalizado
-        fields = ['id', 'username', 'password', 'empresa', 'grupo']  # Certifique-se de incluir 'empresas' nos fields
+        model = Usuarios
+        fields = ['id', 'username', 'password', 'empresa', 'grupo']
 
     def create(self, validated_data):
         # Remove empresas do validated_data para tratar separadamente
         empresas = validated_data.pop('empresa', [])  # Note o plural aqui
         
         # Faz o hash da senha
-        password = validated_data['password']
+        password = validated_data.pop('password')
         hashed_password = make_password(password)
 
         # Cria o usuário com a senha hasheada
@@ -58,7 +58,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
         usuario.empresa.set(empresas)  # Isso vai associar as empresas
 
         return usuario
-
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
