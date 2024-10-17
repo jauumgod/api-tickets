@@ -52,9 +52,18 @@ class TicketsListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]  # Garante que o usuário esteja autenticado
 
     def get_queryset(self):
-        queryset = Tickets.objects.all()
+        user = self.request.user
 
-        # Obtendo os parâmetros da query
+        try:
+            # Obtem todas as empresas associadas ao usuário
+            user_empresas = Usuarios.objects.get(id=user.id).empresa.all()
+        except Usuarios.DoesNotExist:
+            return Tickets.objects.none()  # Nenhum ticket será retornado se o usuário não for encontrado
+
+        # Se o usuário tem empresas associadas, filtrar pelos tickets daquelas empresas
+        queryset = Tickets.objects.filter(empresa__in=user_empresas)
+
+        # Obtendo os parâmetros da query (opcionais) para filtragem adicional
         empresa = self.request.query_params.get('empresa')
         sequencia = self.request.query_params.get('sequencia')
         criacao = self.request.query_params.get('criacao')
@@ -76,7 +85,7 @@ class TicketsListCreateView(generics.ListCreateAPIView):
 
         try:
             # Obtem todas as empresas associadas ao usuário
-            user_empresas = Usuarios.objects.get(id=user.id).empresa.all()  
+            user_empresas = Usuarios.objects.get(id=user.id).empresa.all()
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -91,7 +100,6 @@ class TicketsListCreateView(generics.ListCreateAPIView):
 
         # Salva o ticket com a empresa e o usuário
         serializer.save(usuario=user, empresa=empresa)
-
 
 
 
@@ -196,3 +204,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class ImagensViewSet(viewsets.ModelViewSet):
     queryset = Imagens.objects.all()
     serializer_class = ImagensSerializer
+
+    def create(self, request, *args, **kwargs):
+        ticket = request.data.get('ticket')
+
+        # Verifica se o ticket já tem uma imagem
+        if Imagens.objects.filter(ticket=ticket).exists():
+            return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)

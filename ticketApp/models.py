@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class Empresas(models.Model):
@@ -108,10 +109,23 @@ class Tickets(models.Model):
         super().save(*args, **kwargs)
 
 
+
 class Imagens(models.Model):
     nome = models.CharField(max_length=255)
     ticket = models.ForeignKey(Tickets, on_delete=models.CASCADE, related_name='imagens')
     imagem = models.ImageField(upload_to='imagens_tickets/')
+
+
+
+    def clean(self):
+        # Verifica se o ticket já possui uma imagem associada
+        if Imagens.objects.filter(ticket=self.ticket).exists():
+            raise ValidationError("Este ticket já possui uma imagem associada.")
+
+    def save(self, *args, **kwargs):
+        # Executa a validação antes de salvar
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 

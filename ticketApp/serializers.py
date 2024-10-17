@@ -26,7 +26,7 @@ class TicketSerializers(serializers.ModelSerializer):
         model = Tickets
         fields = ['id', 'sequencia', 'criacao', 'placa','produto', 'transportadora', 'motorista','operador', 'cliente', 
                   'peso_entrada', 'peso_saida','umidade','concluido', 'peso_liquido', 'lote_leira', 'ticket_cancelado',
-                  'usuario','empresa']
+                  'usuario','empresa', 'imagens']
         read_only_fields = ['sequencia', 'criacao', 'empresa','usuario']
         extra_kwargs = {
             'concluido' : {'required': False}
@@ -83,3 +83,10 @@ class ImagensSerializer(serializers.ModelSerializer):
     class Meta:
         model = Imagens
         fields = ['id', 'nome', 'imagem', 'ticket']
+
+
+    def validate(self, data):
+        # Verifica se o ticket já tem uma imagem
+        if Imagens.objects.filter(ticket=data['ticket']).exists():
+            raise serializers.ValidationError("Este ticket já possui uma imagem associada.")
+        return data
