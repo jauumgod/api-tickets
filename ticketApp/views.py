@@ -1,11 +1,11 @@
 from rest_framework import generics
 from rest_framework.response import Response
-from .models import Empresas, Usuarios, Tickets, Imagens
+from .models import Empresas, Grupos, Usuarios, Tickets, Imagens
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth, TruncDay
 from rest_framework.views import APIView
 from .serializers import (
-    EmpresaSerializers, UsuarioSerializer,
+    EmpresaSerializers, GroupSerializer, UsuarioSerializer,
     TicketSerializers, ImagensSerializer, CustomTokenObtainPairSerializer
 )
 from rest_framework.response import Response
@@ -34,6 +34,15 @@ class UserListCreateView(generics.ListCreateAPIView):
 class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Usuarios.objects.all()
     serializer_class = UsuarioSerializer
+
+#==============Grupos ===============
+class GroupCreateView(generics.ListCreateAPIView):
+    queryset = Grupos.objects.all()
+    serializer_class = GroupSerializer
+
+class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Grupos.objects.all()
+    serializer_class = GroupSerializer
 
 
 #===========================TICKETS V2 - CREATE TICKET BASED ON TOKEN =========================
@@ -165,19 +174,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # Verifica se existe o UserOperacao para o usuário
         try:
             user_empresa = Usuarios.objects.get(id=user.id)  
-            empresas = user_empresa.empresa
+            empresas = user_empresa.empresa.all() 
+            grupo = user_empresa.grupo
         except Usuarios.DoesNotExist:
             empresas = []
+            grupo = None
 
         response_data = {
             'access': serializer.validated_data['access'],
             'refresh': serializer.validated_data['refresh'],
             'user_id': user.id,
             'username': user.username,
-            'empresas': [empresas.id] if empresas else [],  # Correção aqui
+            'empresas': [empresa.id for empresa in empresas], 
+            'grupo': grupo.id if grupo else None,  
         }
         
         return Response(response_data)
+
 
 
 class ImagensViewSet(viewsets.ModelViewSet):

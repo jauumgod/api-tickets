@@ -1,9 +1,9 @@
 from django.urls import path, include
 from .views import (
-    TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
+    GroupCreateView, TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
     TicketsListCreateView, TicketsRetrieveUpdateDestroyView,
     EmpresasListCreateView, EmpresasRetrieveUpdateDestroyView,
-    ImagensViewSet, TicketsCountView
+    ImagensViewSet, TicketsCountView, GroupCreateView,GroupRetrieveUpdateDestroyView
 )
 from .views import CustomTokenObtainPairView
 
@@ -26,6 +26,8 @@ urlpatterns = [
     path('tickets/stats/', TicketsStatsView.as_view(), name='tickets-stats'),
     path('empresas/', EmpresasListCreateView.as_view(), name='operacao-list'),
     path('empresas/<int:pk>', EmpresasRetrieveUpdateDestroyView.as_view(), name='tickets-detail'),
+    path('grupos/', GroupCreateView.as_view(), name='tickets-detail'),
+    path('grupos/<int:pk>', GroupRetrieveUpdateDestroyView.as_view(), name='tickets-detail'),
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
