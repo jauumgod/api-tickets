@@ -113,7 +113,7 @@ class Tickets(models.Model):
 class Imagens(models.Model):
     nome = models.CharField(max_length=255)
     ticket = models.ForeignKey(Tickets, on_delete=models.CASCADE, related_name='imagens')
-    imagem = models.ImageField(upload_to='imagens_tickets/')
+    imagem = models.ImageField(upload_to='imagens_tickets/', blank=True)
 
 
 
