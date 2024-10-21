@@ -1,3 +1,4 @@
+from datetime import timezone
 from rest_framework import generics
 from rest_framework.response import Response
 from .models import Empresas, Grupos, Usuarios, Tickets, Imagens
@@ -51,34 +52,35 @@ class TicketsListCreateView(generics.ListCreateAPIView):
     serializer_class = TicketSerializers
     permission_classes = [IsAuthenticated]  # Garante que o usuário esteja autenticado
 
+
     def get_queryset(self):
         user = self.request.user
 
         try:
-            # Obtem todas as empresas associadas ao usuário
             user_empresas = Usuarios.objects.get(id=user.id).empresa.all()
         except Usuarios.DoesNotExist:
             return Tickets.objects.none()  # Nenhum ticket será retornado se o usuário não for encontrado
 
-        # Se o usuário tem empresas associadas, filtrar pelos tickets daquelas empresas
         queryset = Tickets.objects.filter(empresa__in=user_empresas)
 
         # Obtendo os parâmetros da query (opcionais) para filtragem adicional
         empresa = self.request.query_params.get('empresa')
         sequencia = self.request.query_params.get('sequencia')
-        criacao = self.request.query_params.get('criacao')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
 
-        # Filtrando com base nos parâmetros, se estiverem presentes
         if empresa:
             queryset = queryset.filter(empresa__nome__icontains=empresa)
 
         if sequencia:
             queryset = queryset.filter(sequencia=sequencia)
 
-        if criacao:
-            queryset = queryset.filter(criacao=criacao)
+        if start_date and end_date:
+            # Filtra os tickets entre as datas de início e fim
+            queryset = queryset.filter(criacao__gte=start_date, criacao__lte=end_date)
 
-        return queryset
+
+        return queryset.order_by('-criacao')
 
     def perform_create(self, serializer):
         user = self.request.user
