@@ -67,10 +67,20 @@ WSGI_APPLICATION = 'TicketAPIRest.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'grupoorganics02',  # Nome do banco de dados no KingHost
+        'USER': 'grupoorganics02',        # Seu usuário MySQL
+        'PASSWORD': 'Organics15032325',      # Senha do usuário MySQL
+        'HOST': 'mysql.grupoorganics.com.br', # Endereço do servidor MySQL da KingHost
+        'PORT': '3306', 
+        'OPTIONS': {
+            'ssl': {'require': False},  # Desative SSL se não for necessário
+        },           
     }
 }
+
+
+
 
 
 AUTH_PASSWORD_VALIDATORS = [

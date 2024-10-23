@@ -5,7 +5,7 @@ from .views import (
     EmpresasListCreateView, EmpresasRetrieveUpdateDestroyView,
     ImagensViewSet, TicketsCountView, GroupCreateView,GroupRetrieveUpdateDestroyView
 )
-from .views import CustomTokenObtainPairView
+from .views import CustomTokenObtainPairView, homepage
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -18,6 +18,7 @@ router = DefaultRouter()
 router.register(r'imagens', ImagensViewSet, basename='imagens')
 
 urlpatterns = [
+    
     path('users/', UserListCreateView.as_view(), name='users-list'),
     path('users/<int:pk>', UserRetrieveUpdateDestroyView.as_view(), name='users-detail'),
     path('tickets/', TicketsListCreateView.as_view(), name='tickets-list'),
@@ -33,5 +34,6 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     path('', include(router.urls)),
+    
 ]
 
