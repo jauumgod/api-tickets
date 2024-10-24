@@ -1,5 +1,6 @@
 from datetime import timezone
 from django.shortcuts import render
+from rest_framework.decorators import action
 from rest_framework import generics
 from rest_framework.response import Response
 from .models import Empresas, Grupos, Usuarios, Tickets, Imagens
@@ -222,3 +223,13 @@ class ImagensViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return super().create(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['get'], url_path='ticket/(?P<ticket_id>[^/.]+)')
+    def get_image_by_ticket(self, request, ticket_id=None):
+        try:
+            # Buscar a imagem associada ao ticket
+            image_instance = Imagens.objects.get(ticket=ticket_id)
+            serializer = self.get_serializer(image_instance)
+            return Response(serializer.data)
+        except Imagens.DoesNotExist:
+            return Response({'error': 'Imagem não encontrada para este ticket.'}, status=status.HTTP_404_NOT_FOUND)
