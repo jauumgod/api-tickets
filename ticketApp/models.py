@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
+
 
 
 class Empresas(models.Model):
@@ -127,6 +129,17 @@ class Imagens(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+
+#================TABELA DE NOTAS EMITIDAS PARA VINCULAR AO TICKET.=============#
+
+class NotaFiscal(models.Model):
+    nfe = models.CharField(max_length=255, blank=True)
+    criacao = models.DateField(auto_now=True)
+    arquivo = models.FileField(upload_to='notas_fiscais/', blank=True, validators=[FileExtensionValidator(['pdf'])])
+    ticket = models.ForeignKey(Tickets, on_delete=models.CASCADE, related_name='nf')
+
+    def __str__(self):
+        return {self.nfe}
 
 
 

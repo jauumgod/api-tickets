@@ -3,12 +3,12 @@ from django.shortcuts import render
 from rest_framework.decorators import action
 from rest_framework import generics
 from rest_framework.response import Response
-from .models import Empresas, Grupos, Usuarios, Tickets, Imagens
+from .models import Empresas, Grupos, NotaFiscal, Usuarios, Tickets, Imagens
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth, TruncDay
 from rest_framework.views import APIView
 from .serializers import (
-    EmpresaSerializers, GroupSerializer, UsuarioSerializer,
+    EmpresaSerializers, GroupSerializer, NotaFiscalSerializer, UsuarioSerializer,
     TicketSerializers, ImagensSerializer, CustomTokenObtainPairSerializer
 )
 from rest_framework.response import Response
@@ -58,8 +58,7 @@ class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class TicketsListCreateView(generics.ListCreateAPIView):
     serializer_class = TicketSerializers
-    permission_classes = [IsAuthenticated]  # Garante que o usuário esteja autenticado
-
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -67,15 +66,16 @@ class TicketsListCreateView(generics.ListCreateAPIView):
         try:
             user_empresas = Usuarios.objects.get(id=user.id).empresa.all()
         except Usuarios.DoesNotExist:
-            return Tickets.objects.none()  # Nenhum ticket será retornado se o usuário não for encontrado
+            return Tickets.objects.none()
 
         queryset = Tickets.objects.filter(empresa__in=user_empresas)
 
-        # Obtendo os parâmetros da query (opcionais) para filtragem adicional
+        # Obtendo parâmetros de filtragem adicionais
         empresa = self.request.query_params.get('empresa')
         sequencia = self.request.query_params.get('sequencia')
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
+        cliente = self.request.query_params.get('cliente')  # Novo parâmetro para busca por cliente
 
         if empresa:
             queryset = queryset.filter(empresa__nome__icontains=empresa)
@@ -84,9 +84,10 @@ class TicketsListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(sequencia=sequencia)
 
         if start_date and end_date:
-            # Filtra os tickets entre as datas de início e fim
             queryset = queryset.filter(criacao__gte=start_date, criacao__lte=end_date)
 
+        if cliente:
+            queryset = queryset.filter(cliente__icontains=cliente)  # Filtro para cliente
 
         return queryset.order_by('-criacao')
 
@@ -94,22 +95,19 @@ class TicketsListCreateView(generics.ListCreateAPIView):
         user = self.request.user
 
         try:
-            # Obtem todas as empresas associadas ao usuário
             user_empresas = Usuarios.objects.get(id=user.id).empresa.all()
         except Usuarios.DoesNotExist:
             return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not user_empresas.exists():  # Verifica se o usuário tem empresas associadas
+        if not user_empresas.exists():
             return Response(
-                {'error': 'Usuário não está associado a nenhuma empresa.'}, 
+                {'error': 'Usuário não está associado a nenhuma empresa.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Pega a primeira empresa associada (você pode mudar isso conforme necessário)
         empresa = user_empresas.first()
-
-        # Salva o ticket com a empresa e o usuário
         serializer.save(usuario=user, empresa=empresa)
+
 
 
 
@@ -233,3 +231,28 @@ class ImagensViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Imagens.DoesNotExist:
             return Response({'error': 'Imagem não encontrada para este ticket.'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class NotaFiscalViewSet(viewsets.ModelViewSet):
+    queryset = NotaFiscal.objects.all()
+    serializer_class = NotaFiscalSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Salva o objeto NotaFiscal com o PDF e associa ao ticket
+        nota_fiscal = self.perform_create(serializer)
+
+        # Gera a URL completa para o PDF
+        pdf_url = request.build_absolute_uri(nota_fiscal.arquivo.url)
+
+        headers = self.get_success_headers(serializer.data)
+        data_with_pdf_url = serializer.data
+        data_with_pdf_url['pdf_url'] = pdf_url
+
+        return Response(data_with_pdf_url, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        # Este método é chamado durante a criação para salvar o objeto e retornar o objeto salvo
+        return serializer.save()

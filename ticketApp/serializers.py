@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Empresas, Grupos, Sequencia, Tickets, Usuarios, Imagens
+from .models import Empresas, Grupos, NotaFiscal, Sequencia, Tickets, Usuarios, Imagens
 from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -26,7 +26,7 @@ class TicketSerializers(serializers.ModelSerializer):
         model = Tickets
         fields = ['id', 'sequencia', 'criacao', 'placa','produto', 'transportadora', 'motorista','operador', 'cliente', 
                   'peso_entrada', 'peso_saida','umidade','concluido', 'peso_liquido', 'lote_leira', 'ticket_cancelado',
-                  'usuario','empresa', 'imagens']
+                  'usuario','empresa', 'imagens', 'nf']
         read_only_fields = ['sequencia', 'criacao', 'empresa','usuario']
         extra_kwargs = {
             'concluido' : {'required': False}
@@ -89,4 +89,17 @@ class ImagensSerializer(serializers.ModelSerializer):
         # Verifica se o ticket já tem uma imagem
         if Imagens.objects.filter(ticket=data['ticket']).exists():
             raise serializers.ValidationError("Este ticket já possui uma imagem associada.")
+        return data
+    
+
+
+class NotaFiscalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotaFiscal
+        fields = '__all__'
+
+    
+    def validate(self, data):
+        if NotaFiscal.objects.filter(ticket=data['ticket']).exists():
+            raise serializers.ValidationError("Esse ticket ja possui NFs associada.")
         return data
