@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
+from cloudinary.models import CloudinaryField
 
 
 
@@ -115,17 +116,14 @@ class Tickets(models.Model):
 class Imagens(models.Model):
     nome = models.CharField(max_length=255)
     ticket = models.ForeignKey(Tickets, on_delete=models.CASCADE, related_name='imagens')
-    imagem = models.ImageField(upload_to='imagens_tickets/', blank=True)
-
-
+    imagem = CloudinaryField('imagem', blank=True)
+    pdf = CloudinaryField('pdf', blank=True)  # Campo para armazenar PDF
 
     def clean(self):
-        # Verifica se o ticket já possui uma imagem associada
         if Imagens.objects.filter(ticket=self.ticket).exists():
             raise ValidationError("Este ticket já possui uma imagem associada.")
 
     def save(self, *args, **kwargs):
-        # Executa a validação antes de salvar
         self.clean()
         super().save(*args, **kwargs)
 
@@ -135,11 +133,11 @@ class Imagens(models.Model):
 class NotaFiscal(models.Model):
     nfe = models.CharField(max_length=255, blank=True)
     criacao = models.DateField(auto_now=True)
-    arquivo = models.FileField(upload_to='notas_fiscais/', blank=True, validators=[FileExtensionValidator(['pdf'])])
+    arquivo = CloudinaryField('arquivo', blank=True, resource_type='raw')  # Mudado para CloudinaryField
     ticket = models.ForeignKey(Tickets, on_delete=models.CASCADE, related_name='nf')
 
     def __str__(self):
-        return {self.nfe}
+        return self.nfe
 
 
 

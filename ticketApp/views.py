@@ -1,5 +1,5 @@
 from datetime import timezone
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from rest_framework.decorators import action
 from rest_framework import generics
 from rest_framework.response import Response
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from cloudinary import uploader
 
 
 #FIRST HTML
@@ -110,7 +111,6 @@ class TicketsListCreateView(generics.ListCreateAPIView):
 
 
 
-
 class TicketsRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Tickets.objects.all()
     serializer_class = TicketSerializers
@@ -128,7 +128,6 @@ class TicketsRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 
@@ -176,7 +175,6 @@ class TicketsStatsView(APIView):
         return Response(data)
     
 
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CustomTokenObtainPairSerializer
@@ -208,29 +206,40 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return Response(response_data)
 
 
-
 class ImagensViewSet(viewsets.ModelViewSet):
     queryset = Imagens.objects.all()
     serializer_class = ImagensSerializer
 
-    def create(self, request, *args, **kwargs):
-        ticket = request.data.get('ticket')
-
-        # Verifica se o ticket já tem uma imagem
-        if Imagens.objects.filter(ticket=ticket).exists():
-            return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return super().create(request, *args, **kwargs)
+def create(self, request, *args, **kwargs):
+    ticket_id = request.data.get('ticket')
     
-    @action(detail=False, methods=['get'], url_path='ticket/(?P<ticket_id>[^/.]+)')
-    def get_image_by_ticket(self, request, ticket_id=None):
-        try:
-            # Buscar a imagem associada ao ticket
-            image_instance = Imagens.objects.get(ticket=ticket_id)
-            serializer = self.get_serializer(image_instance)
-            return Response(serializer.data)
-        except Imagens.DoesNotExist:
-            return Response({'error': 'Imagem não encontrada para este ticket.'}, status=status.HTTP_404_NOT_FOUND)
+    # Obtém o objeto ticket
+    ticket = get_object_or_404(Tickets, id=ticket_id)
+    
+    # Verifica se o ticket já tem uma imagem
+    if Imagens.objects.filter(ticket=ticket).exists():
+        return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Obtém o arquivo da imagem
+    arquivo = request.FILES.get('imagem')  # Supondo que o campo se chama 'imagem'
+
+    if not arquivo:
+        return Response({'error': 'Arquivo de imagem não fornecido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Faz o upload da imagem para o Cloudinary
+        response = cloudinary.uploader.upload(arquivo)
+        # Salva a imagem no banco de dados
+        imagem = Imagens(
+            nome=arquivo.name,
+            imagem=response['secure_url'],  # A URL da imagem no Cloudinary
+            ticket=ticket
+        )
+        imagem.save()
+        serializer = self.get_serializer(imagem)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class NotaFiscalViewSet(viewsets.ModelViewSet):

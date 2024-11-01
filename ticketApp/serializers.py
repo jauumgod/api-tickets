@@ -96,7 +96,7 @@ class ImagensSerializer(serializers.ModelSerializer):
 class NotaFiscalSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotaFiscal
-        fields = '__all__'
+        fields = ['nfe', 'arquivo', 'ticket']
 
     
     def validate(self, data):

@@ -1,20 +1,17 @@
-
+import cloudinary
+import cloudinary.uploader
+import os
 from pathlib import Path
-
+from decouple import config
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-...')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3l67b(u6si+y0g*6i2sleflkbrv5!!g9z)zu%oimb70b53jn2)'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = []
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -27,6 +24,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'ticketApp',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 AUTH_USER_MODEL = 'ticketApp.Usuarios'
@@ -63,25 +62,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TicketAPIRest.wsgi.application'
 
-
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'grupoorganics02',  # Nome do banco de dados no KingHost
-        'USER': 'grupoorganics02',        # Seu usuário MySQL
-        'PASSWORD': 'Organics15032325',      # Senha do usuário MySQL
-        'HOST': 'mysql.grupoorganics.com.br', # Endereço do servidor MySQL da KingHost
-        'PORT': '3306', 
-        'OPTIONS': {
-            'ssl': {'require': False},  # Desative SSL se não for necessário
-        },           
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': '3306',
     }
 }
-
-
-
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -98,50 +88,49 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+LANGUAGE_CODE = 'pt-br'
 
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
 USE_TZ = True
 
-
-
 STATIC_URL = 'static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-
     ),
-        'DEFAULT_PERMISSION_CLASSES': (
+    'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_PAGINATION_CLASS' : 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE':5
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5
 }
-
-from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1200),  # Tempo de expiração do token de acesso (exemplo: 5 minutos)
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Tempo de expiração do token de refresh (exemplo: 1 dia)
-    'ROTATE_REFRESH_TOKENS': False,                # Rotacionar tokens de refresh (padrão False)
-    'BLACKLIST_AFTER_ROTATION': True,              # Blacklist do refresh token antigo quando for rotacionado
-    'AUTH_HEADER_TYPES': ('Bearer',),              # Tipo de header que será usado na autenticação (padrão Bearer)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1200),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-import os
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+}
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+
 CORS_ALLOW_ALL_ORIGINS = True
 

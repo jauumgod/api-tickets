@@ -1,6 +1,6 @@
 from django.urls import path, include
 from .views import (
-    GroupCreateView, TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
+    GroupCreateView, NotaFiscalViewSet, TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
     TicketsListCreateView, TicketsRetrieveUpdateDestroyView,
     EmpresasListCreateView, EmpresasRetrieveUpdateDestroyView,
     ImagensViewSet, TicketsCountView, GroupCreateView,GroupRetrieveUpdateDestroyView
@@ -16,6 +16,7 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register(r'imagens', ImagensViewSet, basename='imagens')
+router.register(r'notas-fiscais', NotaFiscalViewSet, basename='notafiscal')
 
 urlpatterns = [
     
@@ -32,6 +33,7 @@ urlpatterns = [
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
     
     path('', include(router.urls)),
     
