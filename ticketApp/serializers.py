@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from .models import Empresas, Grupos, NotaFiscal, Sequencia, Tickets, Usuarios, Imagens
+from .models import Empresas, Grupos, NotaFiscal, Produto, Sequencia, Tickets, Usuarios, Imagens
 from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.response import Response
@@ -19,6 +19,11 @@ class GroupSerializer(serializers.ModelSerializer):
 class SequenciaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sequencia
+        fields = '__all__'
+
+class ProdutoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Produto
         fields = '__all__'
 
 
@@ -109,9 +114,14 @@ class ImagensSerializer(serializers.ModelSerializer):
 
 
 class NotaFiscalSerializer(serializers.ModelSerializer):
+    pdf_url = serializers.SerializerMethodField()
     class Meta:
         model = NotaFiscal
-        fields = ['nfe', 'arquivo', 'ticket']
+        fields = ['nfe', 'arquivo', 'ticket', 'pdf_url']
+    
+    def get_pdf_url(self, obj):
+        # Construa a URL completa com o domínio do Cloudinary
+        return f"https://res.cloudinary.com/dvesknzr8/raw/upload/{obj.arquivo}"
 
     
     def validate(self, data):

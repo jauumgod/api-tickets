@@ -1,6 +1,6 @@
 from django.urls import path, include
 from .views import (
-    GroupCreateView, NotaFiscalViewSet, TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
+    GroupCreateView, NotaFiscalViewSet, ProdutoCreateView, ProdutoRetrieveUpdateDestroyView, TicketsStatsView, UserListCreateView, UserRetrieveUpdateDestroyView,
     TicketsListCreateView, TicketsRetrieveUpdateDestroyView,
     EmpresasListCreateView, EmpresasRetrieveUpdateDestroyView,
     ImagensViewSet, TicketsCountView, GroupCreateView,GroupRetrieveUpdateDestroyView
@@ -26,14 +26,16 @@ urlpatterns = [
     path('tickets/<int:pk>', TicketsRetrieveUpdateDestroyView.as_view(), name='tickets-detail'),
     path('tickets/count/', TicketsCountView.as_view(), name='ticket-count'),
     path('tickets/stats/', TicketsStatsView.as_view(), name='tickets-stats'),
-    path('empresas/', EmpresasListCreateView.as_view(), name='operacao-list'),
-    path('empresas/<int:pk>', EmpresasRetrieveUpdateDestroyView.as_view(), name='tickets-detail'),
-    path('grupos/', GroupCreateView.as_view(), name='tickets-detail'),
-    path('grupos/<int:pk>', GroupRetrieveUpdateDestroyView.as_view(), name='tickets-detail'),
-    path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('empresas/', EmpresasListCreateView.as_view(), name='empresa-list'),
+    path('empresas/<int:pk>', EmpresasRetrieveUpdateDestroyView.as_view(), name='empresa-detail'),
+    path('grupos/', GroupCreateView.as_view(), name='grupos-detail'),
+    path('grupos/<int:pk>', GroupRetrieveUpdateDestroyView.as_view(), name='grupos-detail'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('imagens/ticket/<int:ticket_id>/', ImagensViewSet.as_view({'get': 'list_by_ticket'}), name='imagens-by-ticket'),
+    path('produtos/', ProdutoCreateView.as_view(), name='produto-list'),
+    path('produtos/<int:pk>', ProdutoRetrieveUpdateDestroyView.as_view(), name='produto-detail'),
 
 
     

@@ -82,12 +82,17 @@ class Sequencia(models.Model):
         return f'Sequencia para {self.empresa.nome}'
 
 
+class Produto(models.Model):
+    nome = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.nome
+
 class Tickets(models.Model):
     sequencia = models.IntegerField(null=True, blank=True)
     criacao = models.DateField(auto_now_add=True, blank=True)
     horario = models.TimeField(blank=True, null=True)
     placa = models.CharField(max_length=100)
-    produto = models.CharField(max_length=255, blank=True)
     transportadora = models.CharField(max_length=255)
     motorista = models.CharField(max_length=255)
     operador = models.CharField(max_length=255, blank=True)
@@ -104,6 +109,7 @@ class Tickets(models.Model):
                                 related_name='tickets',
                                 null=True,blank=True )
     empresa = models.ForeignKey(Empresas, on_delete=models.CASCADE, related_name='tickets')
+    produto = models.ForeignKey(Produto, on_delete=models.CASCADE, related_name='tickets')
 
     def save(self, *args, **kwargs):
         if self.pk is None:  # Somente gerar para um novo ticket

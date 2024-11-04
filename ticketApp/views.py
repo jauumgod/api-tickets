@@ -1,14 +1,15 @@
 from datetime import timezone
+from django.db import DatabaseError
 from django.shortcuts import get_object_or_404, render
 from rest_framework.decorators import action
 from rest_framework import generics
 from rest_framework.response import Response
-from .models import Empresas, Grupos, NotaFiscal, Usuarios, Tickets, Imagens
+from .models import Empresas, Grupos, NotaFiscal, Produto, Usuarios, Tickets, Imagens
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth, TruncDay, TruncDate, TruncTime
 from rest_framework.views import APIView
 from .serializers import (
-    EmpresaSerializers, GroupSerializer, NotaFiscalSerializer, UsuarioSerializer,
+    EmpresaSerializers, GroupSerializer, NotaFiscalSerializer, ProdutoSerializer, UsuarioSerializer,
     TicketSerializers, ImagensSerializer, CustomTokenObtainPairSerializer
 )
 from rest_framework.response import Response
@@ -55,6 +56,17 @@ class GroupCreateView(generics.ListCreateAPIView):
 class GroupRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Grupos.objects.all()
     serializer_class = GroupSerializer
+
+
+#==============Produtos===============
+
+class ProdutoCreateView(generics.ListCreateAPIView):
+    queryset = Produto.objects.all()
+    serializer_class = ProdutoSerializer
+
+class ProdutoRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Produto.objects.all()
+    serializer_class = ProdutoSerializer
 
 
 #===========================TICKETS V2 - CREATE TICKET BASED ON TOKEN =========================
@@ -146,45 +158,68 @@ class TicketsCountView(APIView):
         })
     
 
+from django.db.models import Sum
+
 class TicketsStatsView(APIView):
     queryset = Tickets.objects.all()
 
     def get(self, request, *args, **kwargs):
-        monthly_stats = (
-            Tickets.objects.annotate(month=TruncDay('criacao'))
-            .values('month')
-            .annotate(
-                emitidos=Count('id'),
-                concluidos=Count('id', filter=Q(concluido=True))
+        try:
+            # Estatísticas mensais
+            monthly_stats = (
+                Tickets.objects.annotate(month=TruncMonth('criacao'))
+                .values('month', 'empresa__nome', 'produto__nome')
+                .annotate(
+                    emitidos=Count('id'),
+                    concluidos=Count('id', filter=Q(concluido=True)),
+                    quantidade_retirada=Sum('peso_liquido')
+                )
+                .order_by('month', 'empresa__nome', 'produto__nome')
             )
-            .order_by('month')
-        )
 
-        daily_stats = (
-            Tickets.objects.annotate(day=TruncDay('criacao'))
-            .values('day')
-            .annotate(
-                emitidos=Count('id'),
-                concluidos=Count('id', filter=Q(concluido=True))
+            # Estatísticas diárias
+            daily_stats = (
+                Tickets.objects.annotate(day=TruncDay('criacao'))
+                .values('day', 'empresa__nome', 'produto__nome')
+                .annotate(
+                    emitidos=Count('id'),
+                    concluidos=Count('id', filter=Q(concluido=True)),
+                    quantidade_retirada=Sum('peso_liquido')
+                )
+                .order_by('day', 'empresa__nome', 'produto__nome')
             )
-            .order_by('day')
-        )
-        time_stats = (
-            Tickets.objects.annotate(hour=TruncTime('horario'))
-            .values('hour')
-            .annotate(
-                emitidos=Count('id'),
-                concluidos=Count('id', filter=Q(concluido=True))
-            )
-            .order_by('hour')
-        )
 
-        data = {
-            'monthly_stats': list(monthly_stats),
-            'daily_stats': list(daily_stats),
-            'time_stats' : list(time_stats),
-        }
-        return Response(data)
+            # Estatísticas horárias
+            time_stats = (
+                Tickets.objects.annotate(hour=TruncTime('horario'))
+                .values('hour', 'empresa__nome', 'produto__nome')
+                .annotate(
+                    emitidos=Count('id'),
+                    concluidos=Count('id', filter=Q(concluido=True)),
+                    quantidade_retirada=Sum('peso_liquido')
+                )
+                .order_by('hour', 'empresa__nome', 'produto__nome')
+            )
+
+            data = {
+                'monthly_stats': list(monthly_stats),
+                'daily_stats': list(daily_stats),
+                'time_stats': list(time_stats),
+            }
+            return Response(data)
+
+        except DatabaseError as db_error:
+            print(f"Database error: {db_error}")  # Registro detalhado do erro
+            return Response(
+                {"error": "Erro no banco de dados. Verifique o log para mais detalhes."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            print(f"Unhandled error: {e}")  # Registro detalhado do erro
+            return Response(
+                {"error": "Ocorreu um erro inesperado. Verifique o log para mais detalhes."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     
 
