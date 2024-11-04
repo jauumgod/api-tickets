@@ -33,6 +33,8 @@ urlpatterns = [
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('imagens/ticket/<int:ticket_id>/', ImagensViewSet.as_view({'get': 'list_by_ticket'}), name='imagens-by-ticket'),
+
 
     
     path('', include(router.urls)),

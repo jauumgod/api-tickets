@@ -5,7 +5,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from .models import Empresas, Grupos, NotaFiscal, Usuarios, Tickets, Imagens
 from django.db.models import Count, Q
-from django.db.models.functions import TruncMonth, TruncDay
+from django.db.models.functions import TruncMonth, TruncDay, TruncDate, TruncTime
 from rest_framework.views import APIView
 from .serializers import (
     EmpresaSerializers, GroupSerializer, NotaFiscalSerializer, UsuarioSerializer,
@@ -16,6 +16,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from cloudinary import uploader
+from django.utils import timezone
+
 
 
 #FIRST HTML
@@ -148,9 +150,8 @@ class TicketsStatsView(APIView):
     queryset = Tickets.objects.all()
 
     def get(self, request, *args, **kwargs):
-
         monthly_stats = (
-            Tickets.objects.annotate(month=TruncMonth('criacao'))
+            Tickets.objects.annotate(month=TruncDay('criacao'))
             .values('month')
             .annotate(
                 emitidos=Count('id'),
@@ -168,11 +169,23 @@ class TicketsStatsView(APIView):
             )
             .order_by('day')
         )
+        time_stats = (
+            Tickets.objects.annotate(hour=TruncTime('horario'))
+            .values('hour')
+            .annotate(
+                emitidos=Count('id'),
+                concluidos=Count('id', filter=Q(concluido=True))
+            )
+            .order_by('hour')
+        )
+
         data = {
             'monthly_stats': list(monthly_stats),
             'daily_stats': list(daily_stats),
+            'time_stats' : list(time_stats),
         }
         return Response(data)
+
     
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -206,40 +219,45 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return Response(response_data)
 
 
+
 class ImagensViewSet(viewsets.ModelViewSet):
     queryset = Imagens.objects.all()
     serializer_class = ImagensSerializer
 
-def create(self, request, *args, **kwargs):
-    ticket_id = request.data.get('ticket')
-    
-    # Obtém o objeto ticket
-    ticket = get_object_or_404(Tickets, id=ticket_id)
-    
-    # Verifica se o ticket já tem uma imagem
-    if Imagens.objects.filter(ticket=ticket).exists():
-        return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Obtém o arquivo da imagem
-    arquivo = request.FILES.get('imagem')  # Supondo que o campo se chama 'imagem'
+    def create(self, request, *args, **kwargs):
+        ticket_id = request.data.get('ticket')
+        
+        # Obtém o objeto ticket
+        ticket = get_object_or_404(Tickets, id=ticket_id)
+        
+        # Verifica se o ticket já tem uma imagem
+        if Imagens.objects.filter(ticket=ticket).exists():
+            return Response({'error': 'Este ticket já possui uma imagem associada.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Obtém o arquivo da imagem
+        arquivo = request.FILES.get('imagem')  # Supondo que o campo se chama 'imagem'
 
-    if not arquivo:
-        return Response({'error': 'Arquivo de imagem não fornecido.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not arquivo:
+            return Response({'error': 'Arquivo de imagem não fornecido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        # Faz o upload da imagem para o Cloudinary
-        response = cloudinary.uploader.upload(arquivo)
-        # Salva a imagem no banco de dados
-        imagem = Imagens(
-            nome=arquivo.name,
-            imagem=response['secure_url'],  # A URL da imagem no Cloudinary
-            ticket=ticket
-        )
-        imagem.save()
-        serializer = self.get_serializer(imagem)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Salva a imagem no banco de dados com o CloudinaryField gerenciando o upload
+        try:
+            imagem = Imagens(
+                nome=arquivo.name,
+                imagem=arquivo,  # O CloudinaryField faz o upload automaticamente
+                ticket=ticket
+            )
+            imagem.save()
+            serializer = self.get_serializer(imagem)
+            return Response( serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def list_by_ticket(self, request, ticket_id):
+        ticket = get_object_or_404(Tickets, id=ticket_id)
+        imagens = Imagens.objects.filter(ticket=ticket)
+        serializer = self.get_serializer(imagens, many=True)
+        return Response(serializer.data)   
         
 
 class NotaFiscalViewSet(viewsets.ModelViewSet):

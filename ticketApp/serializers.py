@@ -1,7 +1,9 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from .models import Empresas, Grupos, NotaFiscal, Sequencia, Tickets, Usuarios, Imagens
 from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.response import Response
 
 
 class EmpresaSerializers(serializers.ModelSerializer):
@@ -24,13 +26,19 @@ class TicketSerializers(serializers.ModelSerializer):
     empresa = EmpresaSerializers(read_only=True)
     class Meta:
         model = Tickets
-        fields = ['id', 'sequencia', 'criacao', 'placa','produto', 'transportadora', 'motorista','operador', 'cliente', 
+        fields = ['id', 'sequencia', 'criacao','horario', 'placa','produto', 'transportadora', 'motorista','operador', 'cliente', 
                   'peso_entrada', 'peso_saida','umidade','concluido', 'peso_liquido', 'lote_leira', 'ticket_cancelado',
                   'usuario','empresa', 'imagens', 'nf']
         read_only_fields = ['sequencia', 'criacao', 'empresa','usuario']
         extra_kwargs = {
             'concluido' : {'required': False}
         }
+    
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if 'criacao' in rep:
+            rep['criacao'] = instance.criacao.isoformat()  # Formato ISO 8601
+        return rep
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -45,13 +53,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
         # Remove empresas do validated_data para tratar separadamente
         empresas = validated_data.pop('empresa', [])  # Note o plural aqui
         
-        # Faz o hash da senha
+        # Faz o hash da senha usando make_password
         password = validated_data.pop('password')
-        hashed_password = make_password(password)
+        validated_data['password'] = make_password(password)  # Faz a criptografia aqui
 
         # Cria o usuário com a senha hasheada
         usuario = Usuarios(**validated_data)
-        usuario.password = hashed_password
         usuario.save()
 
         # Associa as empresas ao usuário
@@ -80,9 +87,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
         
 class ImagensSerializer(serializers.ModelSerializer):
+    imagem_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Imagens
-        fields = ['id', 'nome', 'imagem', 'ticket']
+        fields = ['id', 'nome', 'imagem', 'ticket', 'imagem_url']
+
+    def get_imagem_url(self, obj):
+        # Construa a URL completa com o domínio do Cloudinary
+        return f"https://res.cloudinary.com/dvesknzr8/{obj.imagem}"
 
 
     def validate(self, data):
@@ -91,6 +104,8 @@ class ImagensSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Este ticket já possui uma imagem associada.")
         return data
     
+    
+
 
 
 class NotaFiscalSerializer(serializers.ModelSerializer):

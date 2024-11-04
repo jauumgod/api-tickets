@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
@@ -83,7 +84,8 @@ class Sequencia(models.Model):
 
 class Tickets(models.Model):
     sequencia = models.IntegerField(null=True, blank=True)
-    criacao = models.DateField(auto_now_add=True)
+    criacao = models.DateField(auto_now_add=True, blank=True)
+    horario = models.TimeField(blank=True, null=True)
     placa = models.CharField(max_length=100)
     produto = models.CharField(max_length=255, blank=True)
     transportadora = models.CharField(max_length=255)
@@ -107,9 +109,14 @@ class Tickets(models.Model):
         if self.pk is None:  # Somente gerar para um novo ticket
             sequencia_obj, created = Sequencia.objects.get_or_create(empresa=self.empresa)
             self.sequencia = sequencia_obj.gerar_sequencia()
+        if not self.horario:
+            self.horario = timezone.now().time()
         
         # Chama o método save do modelo pai corretamente
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return str(self.id)
 
 
 
