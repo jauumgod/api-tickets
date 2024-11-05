@@ -5,6 +5,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from cloudinary.models import CloudinaryField
+import pytz
 
 
 
@@ -107,7 +108,7 @@ class Tickets(models.Model):
     usuario = models.ForeignKey(Usuarios,
                                 on_delete=models.CASCADE,
                                 related_name='tickets',
-                                null=True,blank=True )
+                                null=True, blank=True)
     empresa = models.ForeignKey(Empresas, on_delete=models.CASCADE, related_name='tickets')
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE, related_name='tickets')
 
@@ -115,10 +116,13 @@ class Tickets(models.Model):
         if self.pk is None:  # Somente gerar para um novo ticket
             sequencia_obj, created = Sequencia.objects.get_or_create(empresa=self.empresa)
             self.sequencia = sequencia_obj.gerar_sequencia()
+
+        # Define o fuso horário para -3 (Brasília - UTC-3)
         if not self.horario:
-            self.horario = timezone.now().time()
-        
-        # Chama o método save do modelo pai corretamente
+            brasil_tz = pytz.timezone('America/Sao_Paulo')  # Fuso horário Brasil (UTC-3)
+            now = timezone.now().astimezone(brasil_tz)  # Converte para o horário local
+            self.horario = now.time()  # Atribui a hora no formato adequado
+
         super().save(*args, **kwargs)
     
     def __str__(self):

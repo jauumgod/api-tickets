@@ -1,3 +1,4 @@
+import datetime
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from .models import Empresas, Grupos, NotaFiscal, Produto, Sequencia, Tickets, Usuarios, Imagens
@@ -29,20 +30,38 @@ class ProdutoSerializer(serializers.ModelSerializer):
 
 class TicketSerializers(serializers.ModelSerializer):
     empresa = EmpresaSerializers(read_only=True)
+
     class Meta:
         model = Tickets
-        fields = ['id', 'sequencia', 'criacao','horario', 'placa','produto', 'transportadora', 'motorista','operador', 'cliente', 
-                  'peso_entrada', 'peso_saida','umidade','concluido', 'peso_liquido', 'lote_leira', 'ticket_cancelado',
-                  'usuario','empresa', 'imagens', 'nf']
-        read_only_fields = ['sequencia', 'criacao', 'empresa','usuario']
+        fields = [
+            'id', 'sequencia', 'criacao', 'horario', 'placa', 'produto',
+            'transportadora', 'motorista', 'operador', 'cliente', 
+            'peso_entrada', 'peso_saida', 'umidade', 'concluido', 
+            'peso_liquido', 'lote_leira', 'ticket_cancelado', 'usuario',
+            'empresa', 'imagens', 'nf'
+        ]
+        read_only_fields = ['sequencia', 'criacao', 'empresa', 'usuario']
         extra_kwargs = {
-            'concluido' : {'required': False}
+            'concluido': {'required': False}
         }
     
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+
+        # Formatar 'criacao' para ISO 8601
         if 'criacao' in rep:
             rep['criacao'] = instance.criacao.isoformat()  # Formato ISO 8601
+
+        # Formatar 'horario' para HH:MM
+        if 'horario' in rep:
+            # Garantir que 'horario' seja um objeto time e não uma string
+            if isinstance(instance.horario, datetime.time):
+                # Converter o horário para horas e minutos
+                hours, minutes, _ = str(instance.horario).split(':')
+
+                # Reconstruir a string no formato HH:MM
+                rep['horario'] = f"{hours}:{minutes}"
+
         return rep
 
 
@@ -115,16 +134,16 @@ class ImagensSerializer(serializers.ModelSerializer):
 
 class NotaFiscalSerializer(serializers.ModelSerializer):
     pdf_url = serializers.SerializerMethodField()
+
     class Meta:
         model = NotaFiscal
         fields = ['nfe', 'arquivo', 'ticket', 'pdf_url']
     
     def get_pdf_url(self, obj):
-        # Construa a URL completa com o domínio do Cloudinary
-        return f"https://res.cloudinary.com/dvesknzr8/raw/upload/{obj.arquivo}"
-
+        # Certifique-se de que obj.arquivo contém a URL correta do File.io
+        return f"https://www.file.io/FleX/download/{obj.arquivo}" if obj.arquivo else None
     
     def validate(self, data):
         if NotaFiscal.objects.filter(ticket=data['ticket']).exists():
-            raise serializers.ValidationError("Esse ticket ja possui NFs associada.")
+            raise serializers.ValidationError("Esse ticket já possui NFs associadas.")
         return data

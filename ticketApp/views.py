@@ -12,11 +12,11 @@ from .serializers import (
     EmpresaSerializers, GroupSerializer, NotaFiscalSerializer, ProdutoSerializer, UsuarioSerializer,
     TicketSerializers, ImagensSerializer, CustomTokenObtainPairSerializer
 )
-from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions, status, viewsets
 from rest_framework.permissions import IsAuthenticated
-from cloudinary import uploader
+import cloudinary.uploader
+import requests
 from django.utils import timezone
 
 
@@ -302,19 +302,35 @@ class NotaFiscalViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        arquivo_pdf = request.FILES.get('arquivo')
 
-        # Salva o objeto NotaFiscal com o PDF e associa ao ticket
-        nota_fiscal = self.perform_create(serializer)
+        if not arquivo_pdf:
+            return Response({'error': 'Arquivo PDF não fornecido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Gera a URL completa para o PDF
-        pdf_url = request.build_absolute_uri(nota_fiscal.arquivo.url)
+        try:
+            # Faz o upload para o File.io
+            response = requests.post('https://file.io', files={'file': arquivo_pdf})
+            if response.status_code == 200:
+                upload_result = response.json()
+                file_id = upload_result.get('key')  # Obtenha o ID do arquivo
 
-        headers = self.get_success_headers(serializer.data)
-        data_with_pdf_url = serializer.data
-        data_with_pdf_url['pdf_url'] = pdf_url
+                # Salva o objeto NotaFiscal com o ID do arquivo
+                nota_fiscal = serializer.save(arquivo=file_id)
 
-        return Response(data_with_pdf_url, status=status.HTTP_201_CREATED, headers=headers)
+                # Gera a URL completa para o PDF
+                pdf_url = f"https://www.file.io/download/{file_id}"
+                headers = self.get_success_headers(serializer.data)
+
+                # Adiciona a URL ao retorno
+                data_with_pdf_url = serializer.data
+                data_with_pdf_url['pdf_url'] = pdf_url
+
+                return Response(data_with_pdf_url, status=status.HTTP_201_CREATED, headers=headers)
+            else:
+                return Response({'error': 'Falha no upload do arquivo.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
-        # Este método é chamado durante a criação para salvar o objeto e retornar o objeto salvo
         return serializer.save()
