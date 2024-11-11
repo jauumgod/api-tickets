@@ -8,6 +8,7 @@ from cloudinary.models import CloudinaryField
 import pytz
 
 
+#today is gonna be the day.
 
 class Empresas(models.Model):
     nome = models.CharField(max_length=255)
@@ -155,6 +156,5 @@ class NotaFiscal(models.Model):
 
     def __str__(self):
         return self.nfe
-
 
 
